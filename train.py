@@ -21,7 +21,6 @@ except ImportError:
 DATA_DIR = "data/asl_alphabet_train"
 MODEL_PATH = "models/rf_model.pkl" # Nama file tetap rf_model.pkl biar backend gak perlu ubah config
 
-# --- Inisialisasi MediaPipe ---
 mp_hands = mp.solutions.hands
 hands = mp_hands.Hands(static_image_mode=True, max_num_hands=1, min_detection_confidence=0.5)
 
