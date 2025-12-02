@@ -83,7 +83,9 @@ DATA_DIR digunakan untuk menyimpan path ke data data train yang berisi 29 class 
 
 setelah dapat datanya selanjutnya perlu untuk membaca gestur tangan berdasarkan 21 titik landmark dari standard library mediapipe. modul spesifik dari mediapipe untuk detektor tangan yaitu solutions.hands yang digunakan untuk detektor bahasa tangan nanti. parameter dari objek detektor tangan ada 3:
 > static_image_mode=True memberitahu mediapipe bahwa gambar yang diinput adalah gambar statis bukan video
+
 > max_num_hands=1 digunakan untuk deteksi hanya satu tangan karena itu sudah cukup untuk ASL
+
 > min_detection_confidence=0.5 disini semakin tinggi persentasenya maka semakin stricth terhadap noise karena hanya mempertimbangkan deteksi tangan kalau condifence nya diatas 50% atau 0.5
 
 ### Fungsi normalize_landmarks
