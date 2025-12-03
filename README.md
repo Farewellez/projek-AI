@@ -110,3 +110,60 @@ def normalize_landmarks(landmarks):
 
 jadi variable points itu akan menerima nilai dari 21 landmarks dari nilai parameter dan mengubahnya menjadi array NumPy berdimensi (21, 3). base variable akan mengambil element array NumPy yang pertama yaitu titik kordinat dari landmark bagian wrist atau pergelangan tangan. setelah mendapat base point maka lanjut membuat semua landmark relatif dengan base point dengan cara mengurangi semua landmark dengan kordinat dari base point. untuk menjaga agar semua fitur berada pada rentang -1.0 dan 1.0 maka perlu normalisasi atau penskalaan dengan membagi semua kordinat relatif dengan absolut maximum. terakhir function akan me return nilai points atau titik-titik landmark dengan flatten method yang mengubah array (21,3) tadi menjadi satu list panjang (63 fitur)
 
+### Fungsi load_dataset
+Fungsi ini yang akan mengumpulkan semua gambar, eksekusi ekstraksi fitur menggunakan mediapipe dan normalize_landmarks function sebelumnya dan beberapa batasan untuk model svm. kodenya seperti ini
+
+```
+def load_dataset():
+    X, y_raw = [], []
+    
+    # ... (Pengecekan path data) ...
+
+    labels = sorted([f for f in os.listdir(DATA_DIR_FIX) if os.path.isdir(os.path.join(DATA_DIR_FIX, f))])
+    print(f"Detected {len(labels)} classes.")
+
+    for label in labels:
+        folder_path = os.path.join(DATA_DIR_FIX, label)
+        files = [f for f in os.listdir(folder_path) if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
+        
+        # --- PENTING: LIMIT DATA UNTUK SVM ---def load_dataset():
+    X, y_raw = [], []
+    
+    # ... (Pengecekan path data) ...
+
+    labels = sorted([f for f in os.listdir(DATA_DIR_FIX) if os.path.isdir(os.path.join(DATA_DIR_FIX, f))])
+    print(f"Detected {len(labels)} classes.")
+
+    for label in labels:
+        folder_path = os.path.join(DATA_DIR_FIX, label)
+        files = [f for f in os.listdir(folder_path) if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
+        
+        # --- PENTING: LIMIT DATA UNTUK SVM ---
+        # SVM sangat lambat (O(n^2)) jika datanya terlalu banyak.
+        # Kita ambil 1500 sampel per kelas agar keburu deadline (total ~43k data).
+        files = files[:1500] 
+
+        print(f"Processing '{label}' ({len(files)} images)...")
+
+        for img_name in tqdm(files):
+            img_path = os.path.join(folder_path, img_name)
+            try:
+                img = cv2.imread(img_path)
+                if img is None: continue
+
+                img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                result = hands.process(img_rgb)
+
+                if result.multi_hand_landmarks:
+                    lm = result.multi_hand_landmarks[0]
+                    features = normalize_landmarks(lm.landmark)
+                    X.append(features)
+                    y_raw.append(label)
+            except Exception:
+                continue
+
+    return np.array(X), np.array(y_raw)
+```
+
+yang terjadi disini di awal adalah mempersiapkan wadah untuk variabel X yang menampung fitur dan variabel y_raw sebagai label mentah. skrip ini akan membaca semua subfolder setelah itu tiap kelas akan di looping untuk dibaca. files variable akan menggunakan 1500/3000 data saja untuk di training. tiap image files nantinya akan dibaca oleh cv2 (img = cv2.imread(img_path)) kemudian image color akan diubah warnanya agar mengurangi noise dan MediaPipe bekerja lebih optimal. jika mediapipe berhasil mendeteksi tangan di gambar maka landmark yang berada dalam list python yang berisi objek landmarks (multi_hand_landmarks) maka landmarks akan di tambpung di variable lm dan variable feature akan menampung nilai return dari landmark yang telah di normalisasi. function ini kemudian akan mengembalikkan array X untuk fitur dan array y_raw untuk label mentah (list of string)
+
