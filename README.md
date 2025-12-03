@@ -167,3 +167,65 @@ def load_dataset():
 
 yang terjadi disini di awal adalah mempersiapkan wadah untuk variabel X yang menampung fitur dan variabel y_raw sebagai label mentah. skrip ini akan membaca semua subfolder setelah itu tiap kelas akan di looping untuk dibaca. files variable akan menggunakan 1500/3000 data saja untuk di training. tiap image files nantinya akan dibaca oleh cv2 (img = cv2.imread(img_path)) kemudian image color akan diubah warnanya agar mengurangi noise dan MediaPipe bekerja lebih optimal. jika mediapipe berhasil mendeteksi tangan di gambar maka landmark yang berada dalam list python yang berisi objek landmarks (multi_hand_landmarks) maka landmarks akan di tambpung di variable lm dan variable feature akan menampung nilai return dari landmark yang telah di normalisasi. function ini kemudian akan mengembalikkan array X untuk fitur dan array y_raw untuk label mentah (list of string)
 
+### Eksekusi Utama dan Pelatihan Model
+di bagian kode ini model mulai belajar dan diuji.
+
+```
+# --- Main Execution ---
+if __name__ == "__main__":
+    print("--- Memulai Ekstraksi Fitur (IsyaratKu Engine - SVM Version) ---")
+    X, y_raw = load_dataset()
+
+    if len(X) == 0:
+        print("Data kosong. Pastikan dataset sudah benar.")
+        exit()
+
+    # Encode Labels
+    le = LabelEncoder()
+    y = le.fit_transform(y_raw)
+    
+    print(f"\nTotal Sampel: {len(X)}")
+    print(f"Kelas: {le.classes_}")
+
+    # Split Data
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42, stratify=y
+    )
+
+    print("\n--- Training SVM (Support Vector Machine) ---")
+    print("WARNING: Proses ini akan memakan waktu 15-30 menit. Mohon bersabar...")
+    
+    # Inisialisasi SVM
+    # kernel='rbf' -> Cocok untuk data non-linear (gerakan tangan kompleks)
+    # probability=True -> WAJIB agar backend bisa menampilkan % confidence
+    clf = SVC(
+        kernel='rbf', 
+        probability=True, 
+        verbose=True, 
+        random_state=42
+    )
+    
+    clf.fit(X_train, y_train)
+
+    # Evaluasi
+    y_pred = clf.predict(X_test)
+    acc = accuracy_score(y_test, y_pred)
+    print(f"\nModel Accuracy: {acc:.4f} ({acc*100:.2f}%)")
+
+    # Simpan Model
+    # Struktur dictionary disamakan dengan RF agar backend tidak error
+    os.makedirs("models", exist_ok=True)
+    save_data = {
+        'model': clf,
+        'encoder': le,
+        'classes': le.classes_
+    }
+    
+    with open(MODEL_PATH, "wb") as f:
+        pickle.dump(save_data, f)
+    
+    print(f"\nModel SVM berhasil disimpan ke: {MODEL_PATH}")
+    print("Langkah selanjutnya: Copy file ini ke backend/models/rf_model.pkl")
+```
+
+jadi pada bagian awal, variable le akan menyimpan nilai dari class labelencoder. le ini yang kemudian akan mengubah y_raw menjadi angka integer yang akan diproses SVM dan disimpan di variable y (label yang sudah di encode dan bersih). setelah itu dilakukan split data untuk menentukan berapa persen data yang diuji dan berapa persen data yang dilatih. disini kita mengambil 20% data untuk diuji dan sisanya untuk dilatih ke model. train disini menggunakan 20% sample karena dianggap seimbang. pada bagian  clf.fit(X_train, y_train) data pelatihan di fetch dan model SVC akan dioptimalkan. penggunaan model SVC yang merupakan implementasi spesifik dari SVM yang dirancang untuk melakukan tugas klasifikasi menjadi alasan pemilihannya.
